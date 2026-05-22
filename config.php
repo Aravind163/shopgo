@@ -1,9 +1,9 @@
 <?php
-$db_host = getenv('DB_HOST') ?: 'localhost';
-$db_user = getenv('DB_USER') ?: 'root';
-$db_pass = getenv('DB_PASSWORD') ?: '';
-$db_name = getenv('DB_NAME') ?: 'amazon';
-$db_port = (int)(getenv('DB_PORT') ?: 3306);
+$db_host = getenv('MYSQL_ADDON_HOST')     ?: 'localhost';
+$db_user = getenv('MYSQL_ADDON_USER')     ?: 'root';
+$db_pass = getenv('MYSQL_ADDON_PASSWORD') ?: '';
+$db_name = getenv('MYSQL_ADDON_DB')       ?: 'amazon';
+$db_port = (int)(getenv('MYSQL_ADDON_PORT') ?: 3306);
 
 $conn = mysqli_connect($db_host, $db_user, $db_pass, $db_name, $db_port);
 if (!$conn) { die("DB connection failed: " . mysqli_connect_error()); }
