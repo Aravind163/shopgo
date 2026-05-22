@@ -4,26 +4,49 @@ if (!isset($_SESSION['admin'])) { header("Location: admin_login.php"); exit(); }
 include("config.php");
 $admin_name = $_SESSION['admin'];
 
-// Auto-create tables if missing
+// ── Step 1: ensure orders table exists ──────────────────────────────────────
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS orders (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT DEFAULT 1,
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     VARCHAR(100) NOT NULL,
+    product_id  INT NOT NULL,
+    quantity    INT DEFAULT 1,
     total_price DECIMAL(10,2) DEFAULT 0.00,
-    status VARCHAR(20) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)");
-mysqli_query($conn, "CREATE TABLE IF NOT EXISTS transactions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    user_id VARCHAR(100),
-    amount DECIMAL(10,2) DEFAULT 0.00,
-    payment_method VARCHAR(50) DEFAULT 'N/A',
-    status VARCHAR(20) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status      VARCHAR(20) DEFAULT 'pending',
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
 
+// ── Step 2: ensure transactions table exists with FULL schema ────────────────
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS transactions (
+    id             INT AUTO_INCREMENT PRIMARY KEY,
+    order_id       INT NOT NULL,
+    user_id        VARCHAR(100),
+    amount         DECIMAL(10,2) DEFAULT 0.00,
+    payment_method VARCHAR(50) DEFAULT 'N/A',
+    status         VARCHAR(20) DEFAULT 'pending',
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+
+// ── Step 3: patch columns that may be missing on already-created table ───────
+$cols = [];
+$col_res = mysqli_query($conn, "SHOW COLUMNS FROM transactions");
+while ($c = mysqli_fetch_assoc($col_res)) $cols[] = $c['Field'];
+
+if (!in_array('user_id', $cols))
+    mysqli_query($conn, "ALTER TABLE transactions ADD COLUMN user_id VARCHAR(100) AFTER order_id");
+
+if (!in_array('payment_method', $cols))
+    mysqli_query($conn, "ALTER TABLE transactions ADD COLUMN payment_method VARCHAR(50) DEFAULT 'N/A' AFTER amount");
+
+if (!in_array('amount', $cols))
+    mysqli_query($conn, "ALTER TABLE transactions ADD COLUMN amount DECIMAL(10,2) DEFAULT 0.00 AFTER user_id");
+
+if (!in_array('status', $cols))
+    mysqli_query($conn, "ALTER TABLE transactions ADD COLUMN status VARCHAR(20) DEFAULT 'pending'");
+
+if (!in_array('created_at', $cols))
+    mysqli_query($conn, "ALTER TABLE transactions ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+
+// ── Step 4: run the main query ───────────────────────────────────────────────
 $transactions = mysqli_query($conn, "
     SELECT t.*, u.Name as user_name, u.Mobile_number,
            p.product_name, o.quantity, o.status as order_status
@@ -35,7 +58,6 @@ $transactions = mysqli_query($conn, "
 ");
 
 if (!$transactions) die("SQL Error: " . mysqli_error($conn));
-
 $total = mysqli_num_rows($transactions);
 
 $summary = mysqli_fetch_assoc(mysqli_query($conn, "
@@ -89,11 +111,11 @@ tbody tr:hover { background:#fff8f8; }
 .s-pending   { background:#fff3cd; color:#856404; padding:4px 12px; border-radius:12px; font-size:11px; font-weight:bold; }
 .s-failed    { background:#f8d7da; color:#721c24; padding:4px 12px; border-radius:12px; font-size:11px; font-weight:bold; }
 .s-refunded  { background:#d1ecf1; color:#0c5460; padding:4px 12px; border-radius:12px; font-size:11px; font-weight:bold; }
-.os-delivered  { background:#d4edda; color:#155724; padding:3px 8px; border-radius:8px; font-size:10px; }
-.os-pending    { background:#fff3cd; color:#856404; padding:3px 8px; border-radius:8px; font-size:10px; }
-.os-cancelled  { background:#f8d7da; color:#721c24; padding:3px 8px; border-radius:8px; font-size:10px; }
-.os-shipped    { background:#d1ecf1; color:#0c5460; padding:3px 8px; border-radius:8px; font-size:10px; }
-.os-confirmed  { background:#cce5ff; color:#004085; padding:3px 8px; border-radius:8px; font-size:10px; }
+.os-delivered { background:#d4edda; color:#155724; padding:3px 8px; border-radius:8px; font-size:10px; }
+.os-pending   { background:#fff3cd; color:#856404; padding:3px 8px; border-radius:8px; font-size:10px; }
+.os-cancelled { background:#f8d7da; color:#721c24; padding:3px 8px; border-radius:8px; font-size:10px; }
+.os-shipped   { background:#d1ecf1; color:#0c5460; padding:3px 8px; border-radius:8px; font-size:10px; }
+.os-confirmed { background:#cce5ff; color:#004085; padding:3px 8px; border-radius:8px; font-size:10px; }
 .empty { text-align:center; padding:60px; color:#999; background:white; border-radius:10px; }
 </style>
 </head>
@@ -122,7 +144,6 @@ tbody tr:hover { background:#fff8f8; }
 
 <div class="container">
   <h2 style="margin-bottom:20px;color:#333;">📊 Transaction Details</h2>
-
   <div class="stats">
     <div class="stat revenue-card">
       <div class="num">₹<?php echo number_format($summary['revenue'],2); ?></div>
@@ -141,7 +162,7 @@ tbody tr:hover { background:#fff8f8; }
   <table>
     <thead><tr><th>Txn #</th><th>Order #</th><th>Customer</th><th>Product</th><th>Qty</th><th>Amount</th><th>Payment</th><th>Txn Status</th><th>Order Status</th><th>Date</th></tr></thead>
     <tbody>
-    <?php while($t=mysqli_fetch_assoc($transactions)): ?>
+    <?php while($t = mysqli_fetch_assoc($transactions)): ?>
       <tr>
         <td><strong>#<?php echo $t['id']; ?></strong></td>
         <td><a href="order_details.php" style="color:#ff6b6b;text-decoration:none;font-weight:bold;">#<?php echo $t['order_id']; ?></a></td>
