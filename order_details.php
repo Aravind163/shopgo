@@ -117,8 +117,8 @@ select { padding:5px 8px; border:1px solid #ddd; border-radius:5px; font-size:12
         <a href="admin_home.php" onclick="closeMenu()"><span>📋</span><span>Add Product</span></a>
         <a href="order_details.php" class="active-link" onclick="closeMenu()"><span>🛒</span><span>Order Details</span></a>
         <a href="customer_approval.php" onclick="closeMenu()"><span>👥</span><span>Customer Approval</span></a>
-        <a href="customer-list.php" onclick="closeMenu()"><span>⚙️</span><span>Customer List</span></a>
-        <a href="transaction-details.php" onclick="closeMenu()"><span>📊</span><span>Transaction Details</span></a>
+        <a href="customer_list.php" onclick="closeMenu()"><span>⚙️</span><span>Customer List</span></a>
+        <a href="transaction_details.php" onclick="closeMenu()"><span>📊</span><span>Transaction Details</span></a>
       </div>
     </div>
   </div>
