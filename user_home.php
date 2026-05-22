@@ -8,25 +8,6 @@ if (!isset($_SESSION['user']) && !isset($_SESSION['admin'])) {
 
 include("config.php");
 
-// Handle Buy Now
-if (isset($_POST['buy_now'])) {
-    $product_id = intval($_POST['product_id']);
-    $quantity   = max(1, intval($_POST['quantity']));
-    $user_id    = $_SESSION['user_id'] ?? 0;
-
-    $prod = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM products WHERE id='$product_id'"));
-    if ($prod && $prod['stock'] >= $quantity && $user_id) {
-        $total = $prod['price'] * $quantity;
-        mysqli_query($conn, "INSERT INTO orders (user_id, product_id, quantity, total_price, status) VALUES ('$user_id','$product_id','$quantity','$total','pending')");
-        $order_id = mysqli_insert_id($conn);
-        mysqli_query($conn, "INSERT INTO transactions (order_id, user_id, amount, payment_method, status) VALUES ('$order_id','$user_id','$total','COD','pending')");
-        mysqli_query($conn, "UPDATE products SET stock=stock-$quantity WHERE id='$product_id'");
-        $order_success = "✅ Order placed for <strong>" . htmlspecialchars($prod['product_name']) . "</strong>! Total: ₹" . number_format($total,2) . " (COD)";
-    } else {
-        $order_error = "❌ Could not place order. Item may be out of stock.";
-    }
-}
-
 if (isset($_SESSION['user'])) {
     $name     = $_SESSION['user'];
     $userType = 'user';
@@ -97,6 +78,89 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         }
         .navbar .brand .dot { color: var(--accent); }
         .nav-right { display: flex; align-items: center; gap: 20px; }
+
+        /* ── DROPDOWN MENU ── */
+        .menu-container { position: relative; }
+        .menu-btn {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .menu-btn:hover { background: rgba(255,255,255,0.18); }
+        .menu-btn .arrow {
+            font-size: 10px;
+            transition: transform .3s;
+            display: inline-block;
+        }
+        .menu-btn.open .arrow { transform: rotate(180deg); }
+
+        .dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+            min-width: 220px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all .25s ease;
+            overflow: hidden;
+            z-index: 1000;
+        }
+        .dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .dropdown a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: #333;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+            transition: all .2s;
+        }
+        .dropdown a:hover {
+            background: #fff8f5;
+            border-left-color: var(--accent);
+            color: var(--accent);
+            padding-left: 22px;
+        }
+        .dropdown a .menu-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .dropdown a:nth-child(1) .menu-icon { background: #fff0e8; }
+        .dropdown a:nth-child(2) .menu-icon { background: #e8f5ff; }
+        .dropdown a:nth-child(3) .menu-icon { background: #edf7ee; }
+        .dropdown a:nth-child(4) .menu-icon { background: #fff3e0; }
+        .dropdown a .menu-label { display: flex; flex-direction: column; }
+        .dropdown a .menu-label .title { font-weight: 500; font-size: 14px; }
+        .dropdown a .menu-label .sub { font-size: 11px; color: #aaa; font-weight: 400; margin-top: 1px; }
+        .dropdown-divider { height: 1px; background: #f0ede8; margin: 0 14px; }
+
         .user-pill {
             background: var(--mid);
             color: #ccc;
@@ -241,11 +305,10 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         }
         .product-card:hover::before { opacity: 1; }
 
-        /* ── PRODUCT IMAGE ── */
         .product-img-wrap {
             width: 100%;
             height: 200px;
-            background: #ffffff;
+            background: #f0ede8;
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -267,14 +330,12 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             opacity: .35;
         }
 
-        /* ── CARD BODY ── */
         .product-body {
             padding: 18px 20px 20px;
             flex: 1;
             display: flex;
             flex-direction: column;
         }
-
         .product-card h4 {
             font-family: 'Playfair Display', serif;
             font-size: 16px;
@@ -282,7 +343,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             margin-bottom: 10px;
             line-height: 1.3;
         }
-
         .cat-tag {
             display: inline-block;
             background: #f0eee9;
@@ -294,14 +354,12 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             border-radius: 5px;
             margin-bottom: 12px;
         }
-
         .price {
             font-size: 22px;
             font-weight: 700;
             color: var(--accent);
             margin-bottom: 8px;
         }
-
         .stock-row {
             display: flex;
             align-items: center;
@@ -317,7 +375,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         .stock-dot.low { background: #f5a623; }
         .stock-dot.out { background: #ff6b6b; }
         .stock-row span { font-size: 12px; color: var(--muted); }
-
         .description {
             font-size: 13px;
             color: #999;
@@ -326,16 +383,47 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             margin-top: 4px;
         }
 
-        .readonly-badge {
-            margin-top: 18px;
-            text-align: center;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #ccc;
+        /* ── CARD ACTION BUTTONS ── */
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 14px;
             border-top: 1px solid var(--border);
-            padding-top: 12px;
         }
+        .btn-desc {
+            flex: 1;
+            padding: 8px 0;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text);
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all .2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-desc:hover { background: var(--light-bg); border-color: var(--accent); color: var(--accent); }
+        .btn-cart {
+            flex: 1;
+            padding: 8px 0;
+            border: none;
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            color: #fff;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: opacity .2s, transform .2s;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-cart:hover { opacity: .88; transform: translateY(-1px); }
+        .btn-cart.out-of-stock { background: #ddd; color: #999; cursor: not-allowed; pointer-events: none; }
 
         /* ── EMPTY STATE ── */
         .empty-state {
@@ -360,32 +448,64 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         }
         @media (max-width: 480px) {
             .products-grid { grid-template-columns: 1fr; }
+            .nav-right { gap: 10px; }
         }
-        .buy-btn {
-            margin-top: 14px;
-            width: 100%;
-            padding: 10px;
-            background: linear-gradient(135deg, var(--accent2), var(--accent));
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: opacity .2s, transform .2s;
-        }
-        .buy-btn:hover { opacity:.88; transform:translateY(-1px); }
-        .buy-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
-        .qty-input { width:60px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; text-align:center; }
     </style>
 </head>
 <body>
 
 <div class="navbar">
     <div class="brand">
-        <span>🛍️ Shop<span class="dot">.</span></span>
+        <span>🛍️ Shop<span class="dot">. </span>Go</span>
     </div>
     <div class="nav-right">
+
+        <!-- Dropdown Menu -->
+        <div class="menu-container">
+            <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+                ☰ Menu <span class="arrow">▼</span>
+            </button>
+            <div class="dropdown" id="dropdownMenu">
+                <a href="user_home.php">
+                    <div class="menu-icon">🛍️</div>
+                    <div class="menu-label">
+                        <span class="title">Home</span>
+                        
+                    </div>
+                <a href="invoice.php">
+                    <div class="menu-icon">🧾</div>
+                    <div class="menu-label">
+                        <span class="title">Invoice</span>
+                        <span class="sub">View your billing</span>
+                    </div>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="my_orders.php">
+                    <div class="menu-icon">📦</div>
+                    <div class="menu-label">
+                        <span class="title">My Orders</span>
+                        <span class="sub">Track your purchases</span>
+                    </div>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="product_description.php">
+                    <div class="menu-icon">🔍</div>
+                    <div class="menu-label">
+                        <span class="title">Product Description</span>
+                        <span class="sub">Detailed product info</span>
+                    </div>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="cart.php">
+                    <div class="menu-icon">🛒</div>
+                    <div class="menu-label">
+                        <span class="title">Add to Cart</span>
+                        <span class="sub">View your cart</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+
         <div class="user-pill">
             👤 <strong><?php echo htmlspecialchars($name); ?></strong>
             &nbsp;·&nbsp; <?php echo $userType === 'admin' ? '🔐 Admin' : 'Customer'; ?>
@@ -394,12 +514,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
     </div>
 </div>
 
-<?php if(isset($order_success)): ?>
-<div style="background:#d4edda;color:#155724;padding:15px 48px;font-weight:bold;border-bottom:2px solid #28a745;"><?php echo $order_success; ?></div>
-<?php endif; ?>
-<?php if(isset($order_error)): ?>
-<div style="background:#f8d7da;color:#721c24;padding:15px 48px;font-weight:bold;border-bottom:2px solid #ff6b6b;"><?php echo $order_error; ?></div>
-<?php endif; ?>
 <div class="hero">
     <h2>Welcome back,<br><em><?php echo htmlspecialchars($name); ?></em></h2>
     <p>Browse our full product catalogue below. Prices are in Indian Rupees (₹).</p>
@@ -441,8 +555,9 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             $stock     = (int)$p['stock'];
             $dot_class = $stock > 10 ? '' : ($stock > 0 ? 'low' : 'out');
             $stock_lbl = $stock > 0 ? $stock . ' in stock' : 'Out of stock';
+            $cart_class = $stock === 0 ? 'btn-cart out-of-stock' : 'btn-cart';
+            $cart_lbl   = $stock === 0 ? '✕ Out of Stock' : '🛒 Add to Cart';
 
-            // Image block
             $img_block = ($p['image'] && file_exists(__DIR__ . '/' . $p['image']))
                 ? "<img src='" . htmlspecialchars($p['image']) . "' alt='" . htmlspecialchars($p['product_name']) . "'>"
                 : "<span class='no-img-placeholder'>🖼️</span>";
@@ -459,16 +574,10 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
                         <span>{$stock_lbl}</span>
                     </div>
                     <div class='description'>" . htmlspecialchars(substr($p['description'], 0, 100)) . (strlen($p['description']) > 100 ? '…' : '') . "</div>
-                    <form method='POST' style='margin-top:14px;'>
-                        <input type='hidden' name='product_id' value='" . $p['id'] . "'>
-                        <div style='display:flex;gap:8px;align-items:center;margin-bottom:8px;'>
-                            <label style='font-size:12px;color:#999;'>Qty:</label>
-                            <input type='number' name='quantity' value='1' min='1' max='" . $stock . "' class='qty-input'>
-                        </div>
-                        <button type='submit' name='buy_now' class='buy-btn' " . ($stock===0?"disabled":"") . ">
-                            " . ($stock===0 ? '❌ Out of Stock' : '🛒 Buy Now (COD)') . "
-                        </button>
-                    </form>
+                    <div class='card-actions'>
+                        <a href='product_description.php?id=" . $p['id'] . "' class='btn-desc'>🔍 Details</a>
+                        <a href='cart.php?add=" . $p['id'] . "' class='{$cart_class}'>{$cart_lbl}</a>
+                    </div>
                 </div>
             </div>";
         }
@@ -522,5 +631,21 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
     </div>
 
 </div>
+
+<script>
+function toggleMenu() {
+    const btn  = document.getElementById('menuBtn');
+    const menu = document.getElementById('dropdownMenu');
+    btn.classList.toggle('open');
+    menu.classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+    const container = document.querySelector('.menu-container');
+    if (!container.contains(e.target)) {
+        document.getElementById('menuBtn').classList.remove('open');
+        document.getElementById('dropdownMenu').classList.remove('open');
+    }
+});
+</script>
 </body>
 </html>
