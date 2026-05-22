@@ -17,7 +17,6 @@ if (!is_dir("uploads")) {
     mkdir("uploads", 0755, true);
 }
 
-// ════════════ ADD PRODUCT ════════════
 if (isset($_POST['add_product'])) {
     $product_name        = mysqli_real_escape_string($conn, $_POST['product_name']);
     $product_price       = mysqli_real_escape_string($conn, $_POST['product_price']);
@@ -510,6 +509,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             transition: transform 0.3s;
             display: flex;
             flex-direction: column;
+            height: 100%;
         }
 
         .product-card:hover { 
@@ -519,19 +519,22 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
 
         .product-img-wrap {
             width: 100%;
-            height: 180px;
-            background: #f0f0f0;
+            height: 200px;
+            background: #ffffff;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .product-img-wrap img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            object-position: center;
             transition: transform 0.4s;
+            display: block;
         }
 
         .product-card:hover .product-img-wrap img { 
@@ -564,7 +567,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         }
 
         .product-category {
-            background: #f0f0f0;
+            background: #ffffff;
             padding: 4px 10px;
             border-radius: 5px;
             font-size: 12px;
@@ -650,7 +653,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
                 📋 Menu
             </button>
             <div class="dropdown-menu" id="dropdownMenu">
-                <a href="admin_home.php" onclick="closeMenu()">
+                <a href="add_products.php" onclick="closeMenu()">
                     <span class="icon">📦</span>
                     <span>Products details</span>
                 </a>
@@ -658,19 +661,19 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
                     <span class="icon">📋</span>
                     <span>Products add</span>
                 </a>
-                <a href="#orders-section" onclick="closeMenu()">
+                <a href="order_details.php" onclick="closeMenu()">
                     <span class="icon">🛒</span>
                     <span>Order details</span>
                 </a>
-                <a href="#customers-section" onclick="closeMenu()">
+                <a href="customer_approval.php" onclick="closeMenu()">
                     <span class="icon">👥</span>
                     <span>Customer Approval</span>
                 </a>
-                <a href="#settings-section" onclick="closeMenu()">
+                <a href="customer_list.php" onclick="closeMenu()">
                     <span class="icon">⚙️</span>
                     <span>Customer List</span>
                 </a>
-                <a href="#reports-section" onclick="closeMenu()">
+                <a href="transaction_details.php" onclick="closeMenu()">
                     <span class="icon">📊</span>
                     <span>Transaction details</span>
                 </a>

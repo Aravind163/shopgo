@@ -8,6 +8,25 @@ if (!isset($_SESSION['user']) && !isset($_SESSION['admin'])) {
 
 include("config.php");
 
+// Handle Buy Now
+if (isset($_POST['buy_now'])) {
+    $product_id = intval($_POST['product_id']);
+    $quantity   = max(1, intval($_POST['quantity']));
+    $user_id    = $_SESSION['user_id'] ?? 0;
+
+    $prod = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM products WHERE id='$product_id'"));
+    if ($prod && $prod['stock'] >= $quantity && $user_id) {
+        $total = $prod['price'] * $quantity;
+        mysqli_query($conn, "INSERT INTO orders (user_id, product_id, quantity, total_price, status) VALUES ('$user_id','$product_id','$quantity','$total','pending')");
+        $order_id = mysqli_insert_id($conn);
+        mysqli_query($conn, "INSERT INTO transactions (order_id, user_id, amount, payment_method, status) VALUES ('$order_id','$user_id','$total','COD','pending')");
+        mysqli_query($conn, "UPDATE products SET stock=stock-$quantity WHERE id='$product_id'");
+        $order_success = "✅ Order placed for <strong>" . htmlspecialchars($prod['product_name']) . "</strong>! Total: ₹" . number_format($total,2) . " (COD)";
+    } else {
+        $order_error = "❌ Could not place order. Item may be out of stock.";
+    }
+}
+
 if (isset($_SESSION['user'])) {
     $name     = $_SESSION['user'];
     $userType = 'user';
@@ -225,8 +244,8 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         /* ── PRODUCT IMAGE ── */
         .product-img-wrap {
             width: 100%;
-            height: 190px;
-            background: #f0ede8;
+            height: 200px;
+            background: #ffffff;
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -237,8 +256,10 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         .product-img-wrap img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            object-position: center;
             transition: transform .4s ease;
+            display: block;
         }
         .product-card:hover .product-img-wrap img { transform: scale(1.06); }
         .product-img-wrap .no-img-placeholder {
@@ -340,6 +361,22 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         @media (max-width: 480px) {
             .products-grid { grid-template-columns: 1fr; }
         }
+        .buy-btn {
+            margin-top: 14px;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity .2s, transform .2s;
+        }
+        .buy-btn:hover { opacity:.88; transform:translateY(-1px); }
+        .buy-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+        .qty-input { width:60px; padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px; text-align:center; }
     </style>
 </head>
 <body>
@@ -357,6 +394,12 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
     </div>
 </div>
 
+<?php if(isset($order_success)): ?>
+<div style="background:#d4edda;color:#155724;padding:15px 48px;font-weight:bold;border-bottom:2px solid #28a745;"><?php echo $order_success; ?></div>
+<?php endif; ?>
+<?php if(isset($order_error)): ?>
+<div style="background:#f8d7da;color:#721c24;padding:15px 48px;font-weight:bold;border-bottom:2px solid #ff6b6b;"><?php echo $order_error; ?></div>
+<?php endif; ?>
 <div class="hero">
     <h2>Welcome back,<br><em><?php echo htmlspecialchars($name); ?></em></h2>
     <p>Browse our full product catalogue below. Prices are in Indian Rupees (₹).</p>
@@ -416,7 +459,16 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
                         <span>{$stock_lbl}</span>
                     </div>
                     <div class='description'>" . htmlspecialchars(substr($p['description'], 0, 100)) . (strlen($p['description']) > 100 ? '…' : '') . "</div>
-                    <div class='readonly-badge'>View only</div>
+                    <form method='POST' style='margin-top:14px;'>
+                        <input type='hidden' name='product_id' value='" . $p['id'] . "'>
+                        <div style='display:flex;gap:8px;align-items:center;margin-bottom:8px;'>
+                            <label style='font-size:12px;color:#999;'>Qty:</label>
+                            <input type='number' name='quantity' value='1' min='1' max='" . $stock . "' class='qty-input'>
+                        </div>
+                        <button type='submit' name='buy_now' class='buy-btn' " . ($stock===0?"disabled":"") . ">
+                            " . ($stock===0 ? '❌ Out of Stock' : '🛒 Buy Now (COD)') . "
+                        </button>
+                    </form>
                 </div>
             </div>";
         }
