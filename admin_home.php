@@ -5,6 +5,11 @@ if (!isset($_SESSION['admin'])) {
     header("Location: admin_login.php");
     exit();
 }
+if (isset($_GET['reset'])) {
+    $editing_product = false;
+    header("Location: add_products.php");
+    exit();
+}
 
 include("config.php");
 
@@ -12,6 +17,17 @@ $admin_name = $_SESSION['admin'];
 $message = "";
 $error_msg = "";
 $editing_product = null;
+
+// ✅ Handle success messages from redirect
+if (isset($_GET['success'])) {
+    if ($_GET['success'] === 'updated') {
+        $message = "✅ Product updated successfully!";
+    } elseif ($_GET['success'] === 'added') {
+        $message = "✅ Product added successfully!";
+    } elseif ($_GET['success'] === 'deleted') {
+        $message = "✅ Product deleted successfully!";
+    }
+}
 
 if (!is_dir("uploads")) {
     mkdir("uploads", 0755, true);
@@ -49,8 +65,8 @@ if (isset($_POST['add_product'])) {
                 VALUES ('$product_name', '$product_price', '$product_category', '$product_description', '$product_stock', '$image_path')";
 
         if (mysqli_query($conn, $sql)) {
-            $message = "✅ Product added successfully!";
-            header("Refresh:1");
+            header("Location: add_products.php?success=added");
+            exit();
         } else {
             $error_msg = "❌ Error adding product: " . mysqli_error($conn);
         }
@@ -108,8 +124,9 @@ if (isset($_POST['update_product'])) {
                 WHERE id='$product_id'";
 
         if (mysqli_query($conn, $sql)) {
-            $message = "✅ Product updated successfully!";
-            header("Refresh:1");
+            // ✅ Redirect to reset form to "Add" mode (removes ?edit=ID parameter)
+            header("Location: add_products.php?success=updated");
+            exit();
         } else {
             $error_msg = "❌ Error updating product: " . mysqli_error($conn);
         }
@@ -129,14 +146,13 @@ if (isset($_GET['delete'])) {
 
     $sql = "DELETE FROM products WHERE id='$product_id'";
     if (mysqli_query($conn, $sql)) {
-        $message = "✅ Product deleted successfully!";
-        header("Refresh:1");
+        header("Location: add_products.php?success=deleted");
+        exit();
     } else {
         $error_msg = "❌ Error deleting product!";
     }
 }
 
-// ════════════ LOAD EDIT PRODUCT ════════════
 if (isset($_GET['edit'])) {
     $product_id = intval($_GET['edit']);
     $editing_product = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM products WHERE id='$product_id'"));
@@ -434,6 +450,9 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         .cancel-btn {
             background: #ddd;
             color: #333;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
         }
 
         .cancel-btn:hover {
@@ -709,7 +728,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             <div class="form-group">
                 <input type="text" name="product_name" placeholder="Product Name" 
                        value="<?php echo $editing_product ? htmlspecialchars($editing_product['product_name']) : ''; ?>" required>
-                <input type="number" step="0.01" name="product_price" placeholder="Price" 
+                <input type="number" step="1" name="product_price" placeholder="Price" 
                        value="<?php echo $editing_product ? htmlspecialchars($editing_product['price']) : ''; ?>" required>
                 <input type="number" name="product_stock" placeholder="Stock Quantity" 
                        value="<?php echo $editing_product ? htmlspecialchars($editing_product['stock']) : ''; ?>" required>
@@ -768,7 +787,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         </div>
     </div>
 
-    <!-- ════════════ PRODUCTS DISPLAY ════════════ -->
     <?php
     function admin_products($result, $show_category = true) {
         if (mysqli_num_rows($result) === 0) {
@@ -832,7 +850,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
 
 </div>
 
-<!-- ════════════ JAVASCRIPT ════════════ -->
 <script>
     function toggleMenu() {
         const dropdownMenu = document.getElementById('dropdownMenu');
@@ -847,7 +864,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         document.querySelector('.menu-toggle').classList.remove('active');
     }
 
-    // Close menu when clicking outside
     document.addEventListener('click', function(event) {
         const menuContainer = document.querySelector('.menu-container');
         if (!menuContainer.contains(event.target)) {
@@ -855,7 +871,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         }
     });
 
-    // Scroll to form when editing
     window.addEventListener('load', function() {
         <?php if ($editing_product): ?>
             document.querySelector('.add-product-form').scrollIntoView({ behavior: 'smooth' });
