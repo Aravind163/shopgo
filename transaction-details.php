@@ -4,16 +4,38 @@ if (!isset($_SESSION['admin'])) { header("Location: admin_login.php"); exit(); }
 include("config.php");
 $admin_name = $_SESSION['admin'];
 
-// ✅ FIXED: Join on Name column instead of id
+// Auto-create tables if missing
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT DEFAULT 1,
+    total_price DECIMAL(10,2) DEFAULT 0.00,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    user_id VARCHAR(100),
+    amount DECIMAL(10,2) DEFAULT 0.00,
+    payment_method VARCHAR(50) DEFAULT 'N/A',
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+
 $transactions = mysqli_query($conn, "
     SELECT t.*, u.Name as user_name, u.Mobile_number,
            p.product_name, o.quantity, o.status as order_status
     FROM transactions t
-    LEFT JOIN users u   ON t.user_id  = u.Name
-    LEFT JOIN orders o  ON t.order_id = o.id
+    LEFT JOIN users u    ON t.user_id    = u.Name
+    LEFT JOIN orders o   ON t.order_id   = o.id
     LEFT JOIN products p ON o.product_id = p.id
     ORDER BY t.created_at DESC
 ");
+
+if (!$transactions) die("SQL Error: " . mysqli_error($conn));
+
 $total = mysqli_num_rows($transactions);
 
 $summary = mysqli_fetch_assoc(mysqli_query($conn, "
@@ -50,15 +72,13 @@ body { font-family:'Segoe UI',sans-serif; background:#f5f5f5; }
 .navbar-right { display:flex; align-items:center; gap:15px; padding-right:30px; }
 .admin-badge { background:rgba(255,255,255,0.2); color:white; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; }
 .logout-btn { background:white; color:#ff6b6b; padding:9px 20px; border-radius:5px; font-weight:bold; text-decoration:none; }
-
 .container { max-width:1400px; margin:0 auto; padding:30px 20px; }
 .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:15px; margin-bottom:25px; }
 .stat { background:white; padding:18px; border-radius:10px; text-align:center; box-shadow:0 3px 10px rgba(0,0,0,0.07); }
 .stat .num { font-size:24px; font-weight:bold; margin-bottom:4px; }
 .stat .lbl { font-size:12px; color:#888; text-transform:uppercase; }
-.revenue-card { background:linear-gradient(135deg,#ff6b6b,#f2630a); color:white !important; }
+.revenue-card { background:linear-gradient(135deg,#ff6b6b,#f2630a); }
 .revenue-card .num, .revenue-card .lbl { color:white !important; }
-
 table { width:100%; border-collapse:collapse; background:white; border-radius:10px; overflow:hidden; box-shadow:0 3px 15px rgba(0,0,0,0.08); }
 thead { background:linear-gradient(135deg,#ff6b6b,#f2630a); color:white; }
 th, td { padding:13px 16px; text-align:left; font-size:13px; }
@@ -129,7 +149,7 @@ tbody tr:hover { background:#fff8f8; }
         <td><?php echo htmlspecialchars($t['product_name'] ?? 'N/A'); ?></td>
         <td><?php echo $t['quantity'] ?? 1; ?></td>
         <td class="amount">₹<?php echo number_format($t['amount'],2); ?></td>
-        <td style="color:#666"><?php echo htmlspecialchars($t['payment_method']); ?></td>
+        <td style="color:#666"><?php echo htmlspecialchars($t['payment_method'] ?? 'N/A'); ?></td>
         <td><span class="s-<?php echo $t['status']; ?>"><?php echo ucfirst($t['status']); ?></span></td>
         <td><span class="os-<?php echo $t['order_status'] ?? 'pending'; ?>"><?php echo ucfirst($t['order_status'] ?? 'N/A'); ?></span></td>
         <td style="color:#999;font-size:12px"><?php echo date('d M Y H:i', strtotime($t['created_at'])); ?></td>
