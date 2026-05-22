@@ -4,12 +4,31 @@ if (!isset($_SESSION['admin'])) { header("Location: admin_login.php"); exit(); }
 include("config.php");
 $admin_name = $_SESSION['admin'];
 
+// Auto-create orders table if it doesn't exist
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT DEFAULT 1,
+    total_price DECIMAL(10,2) DEFAULT 0.00,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+
+// Auto-create transactions table if it doesn't exist
+mysqli_query($conn, "CREATE TABLE IF NOT EXISTS transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    amount DECIMAL(10,2) DEFAULT 0.00,
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+
 // Update order status
 if (isset($_POST['update_status'])) {
     $oid    = intval($_POST['order_id']);
     $status = mysqli_real_escape_string($conn, $_POST['status']);
     mysqli_query($conn, "UPDATE orders SET status='$status' WHERE id='$oid'");
-    // update transaction too
     if ($status === 'delivered') {
         mysqli_query($conn, "UPDATE transactions SET status='completed' WHERE order_id='$oid'");
     } elseif ($status === 'cancelled') {
@@ -18,7 +37,6 @@ if (isset($_POST['update_status'])) {
     header("Refresh:0");
 }
 
-// ✅ FIXED: Join on Name column (users table has Name, not id)
 $sql_orders = "
     SELECT o.*, u.Name as user_name, u.Mobile_number, p.product_name, p.image
     FROM orders o
@@ -29,21 +47,15 @@ $sql_orders = "
 $orders = mysqli_query($conn, $sql_orders);
 
 if (!$orders) {
-    die("❌ SQL Error: " . mysqli_error($conn) . "<br><br><strong>Query:</strong><br>" . htmlspecialchars($sql_orders));
+    die("SQL Error: " . mysqli_error($conn));
 }
 
 $total = mysqli_num_rows($orders);
 
 $counts = [];
 foreach(['pending','confirmed','shipped','delivered','cancelled'] as $s) {
-    $count_sql = "SELECT COUNT(*) as c FROM orders WHERE status='$s'";
-    $count_result = mysqli_query($conn, $count_sql);
-    if ($count_result) {
-        $r = mysqli_fetch_assoc($count_result);
-        $counts[$s] = $r['c'];
-    } else {
-        $counts[$s] = 0;
-    }
+    $r = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as c FROM orders WHERE status='$s'"));
+    $counts[$s] = $r['c'];
 }
 ?>
 <!DOCTYPE html>
@@ -130,7 +142,7 @@ select { padding:5px 8px; border:1px solid #ddd; border-radius:5px; font-size:12
   </div>
 
   <?php if ($total === 0): ?>
-    <div class="empty">📭 No orders yet.</div>
+    <div class="empty">📭 No orders placed yet.</div>
   <?php else: ?>
   <table>
     <thead><tr><th>#</th><th>Product</th><th>Customer</th><th>Qty</th><th>Total</th><th>Status</th><th>Date</th><th>Update</th></tr></thead>
@@ -139,7 +151,7 @@ select { padding:5px 8px; border:1px solid #ddd; border-radius:5px; font-size:12
       <tr>
         <td><strong>#<?php echo $o['id']; ?></strong></td>
         <td style="display:flex;align-items:center;gap:10px;padding:13px 15px;">
-          <?php if($o['image'] && file_exists(__DIR__.'/'.$o['image'])): ?>
+          <?php if(!empty($o['image']) && file_exists(__DIR__.'/'.$o['image'])): ?>
             <img src="<?php echo htmlspecialchars($o['image']); ?>" class="product-img">
           <?php else: ?><div style="width:45px;height:45px;background:#f0f0f0;border-radius:5px;display:flex;align-items:center;justify-content:center;">🖼️</div><?php endif; ?>
           <?php echo htmlspecialchars($o['product_name'] ?? 'Deleted product'); ?>
