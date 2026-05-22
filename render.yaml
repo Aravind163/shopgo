@@ -1,0 +1,20 @@
+# Render deployment configuration
+# Docs: https://render.com/docs/render-yaml-spec
+
+services:
+  - type: web
+    name: amazon-shop
+    env: php
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      - key: DB_HOST
+        sync: false   # Fill in Render dashboard → Environment
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: amazon
+      - key: DB_PORT
+        value: "3306"
