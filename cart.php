@@ -51,7 +51,7 @@ if (isset($_GET['remove'])) {
 }
 
 // Update quantity
-if (isset($_POST['update_qty'])) {
+if (isset($_POST['update_qty']) || isset($_POST['checkout'])) {
     foreach ($_POST['qty'] as $pid => $qty) {
         $pid = (int)$pid; $qty = (int)$qty;
         if (isset($_SESSION['cart'][$pid])) {
@@ -59,7 +59,11 @@ if (isset($_POST['update_qty'])) {
             else $_SESSION['cart'][$pid]['qty'] = min($qty, $_SESSION['cart'][$pid]['stock']);
         }
     }
-    header("Location: cart.php");
+    if (isset($_POST['checkout'])) {
+        header("Location: invoice.php");
+    } else {
+        header("Location: cart.php");
+    }
     exit();
 }
 
@@ -364,7 +368,7 @@ $item_count = array_sum(array_column($cart, 'qty'));
             <div class="summary-line"><span>Shipping</span><span style="color:#34c46a">Free</span></div>
             <div class="summary-line total"><span>Total</span><span>₹<?php echo number_format($total, 2); ?></span></div>
             <button type="submit" name="update_qty" class="checkout-btn" style="margin-bottom:4px">↻ Update Cart</button>
-            <a href="invoice.php" class="checkout-btn" style="margin-top:8px">Proceed to Checkout →</a>
+            <button type="submit" name="checkout" class="checkout-btn" style="margin-top:8px">Proceed to Checkout →</button>
             <a href="user_home.php" class="continue-btn">← Continue Shopping</a>
             <div class="secure-note">🔒 Secure checkout · All prices in INR</div>
         </div>
