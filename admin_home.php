@@ -31,18 +31,13 @@ if (isset($_GET['success'])) {
 
 // ════════════ CLOUDINARY UPLOAD HELPER ════════════
 function upload_to_cloudinary($file_tmp) {
-    $Cloud_Name = getenv('CLOUDINARY_CLOUD_NAME');
-    $Api_Key    = getenv('CLOUDINARY_API_KEY');
-    $Api_Secret = getenv('CLOUDINARY_API_SECRET');
-    $Timestamp  = time();
-    $Signature  = sha1('timestamp=' . $Timestamp . $Api_Secret);
-    $Url        = 'https://api.cloudinary.com/v1_1/' . $Cloud_Name . '/image/upload';
+    $Cloud_Name    = getenv('CLOUDINARY_CLOUD_NAME');
+    $Upload_Preset = getenv('CLOUDINARY_UPLOAD_PRESET');
+    $Url           = 'https://api.cloudinary.com/v1_1/' . $Cloud_Name . '/image/upload';
 
     $Post_Data = [
-        'file'      => new CURLFile($file_tmp),
-        'api_key'   => $Api_Key,
-        'timestamp' => $Timestamp,
-        'signature' => $Signature,
+        'file'          => new CURLFile($file_tmp),
+        'upload_preset' => $Upload_Preset,
     ];
 
     $ch = curl_init($Url);
@@ -152,8 +147,9 @@ if (isset($_GET['delete'])) {
     $product_id = intval($_GET['delete']);
 
     $img_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT image FROM products WHERE id='$product_id'"));
-    if ($img_row && $img_row['image'] && file_exists(__DIR__ . '/' . $img_row['image'])) {
-        unlink($img_row['image']);
+    if ($img_row && $img_row['image']) {
+        // Cloudinary images are URLs — no local file to delete
+        // Cloudinary image — nothing to unlink locally
     }
 
     $sql = "DELETE FROM products WHERE id='$product_id'";
@@ -759,7 +755,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
 
             <div class="form-group">
                 <input type="file" name="product_image" accept="image/*">
-                <?php if ($editing_product && $editing_product['image'] && file_exists(__DIR__ . '/' . $editing_product['image'])): ?>
+                <?php if ($editing_product && $editing_product['image']): ?>
                     <div class="current-image">
                         <p><strong>Current Image:</strong></p>
                         <img src="<?php echo htmlspecialchars($editing_product['image']); ?>" alt="<?php echo htmlspecialchars($editing_product['product_name']); ?>">
@@ -807,7 +803,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
         }
         echo "<div class='products-grid'>";
         while ($p = mysqli_fetch_assoc($result)) {
-            $img_html = ($p['image'] && file_exists(__DIR__ . '/' . $p['image']))
+            $img_html = ($p['image'])
                 ? "<img src='" . htmlspecialchars($p['image']) . "' alt='" . htmlspecialchars($p['product_name']) . "'>"
                 : "<span class='no-img'>🖼️</span>";
 
