@@ -330,7 +330,7 @@ $item_count = array_sum(array_column($cart, 'qty'));
             <?php foreach ($cart as $pid => $item): ?>
             <div class="cart-item">
                 <div class="item-img">
-                    <?php if ($item['image'] && file_exists(__DIR__ . '/' . $item['image'])): ?>
+                    <?php if ($item['image']): ?>
                         <img src="<?php echo htmlspecialchars($item['image']); ?>" alt="">
                     <?php else: ?>
                         <span class="no-img">🖼️</span>

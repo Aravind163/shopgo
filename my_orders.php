@@ -218,7 +218,7 @@ $status_colors = [
                 <td><span class="order-id">#<?php echo $o['id']; ?></span></td>
                 <td>
                     <div class="prod-info">
-                        <?php if (!empty($o['image']) && file_exists(__DIR__.'/'.$o['image'])): ?>
+                        <?php if (!empty($o['image'])): ?>
                             <img src="<?php echo htmlspecialchars($o['image']); ?>" class="prod-thumb" alt="">
                         <?php else: ?>
                             <div class="prod-no-img">🖼️</div>

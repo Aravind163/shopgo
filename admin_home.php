@@ -29,8 +29,31 @@ if (isset($_GET['success'])) {
     }
 }
 
-if (!is_dir("uploads")) {
-    mkdir("uploads", 0755, true);
+// ════════════ CLOUDINARY UPLOAD HELPER ════════════
+function upload_to_cloudinary($file_tmp) {
+    $Cloud_Name = getenv('CLOUDINARY_CLOUD_NAME');
+    $Api_Key    = getenv('CLOUDINARY_API_KEY');
+    $Api_Secret = getenv('CLOUDINARY_API_SECRET');
+    $Timestamp  = time();
+    $Signature  = sha1('timestamp=' . $Timestamp . $Api_Secret);
+    $Url        = 'https://api.cloudinary.com/v1_1/' . $Cloud_Name . '/image/upload';
+
+    $Post_Data = [
+        'file'      => new CURLFile($file_tmp),
+        'api_key'   => $Api_Key,
+        'timestamp' => $Timestamp,
+        'signature' => $Signature,
+    ];
+
+    $ch = curl_init($Url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $Post_Data);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $Response = curl_exec($ch);
+    curl_close($ch);
+
+    $Result = json_decode($Response, true);
+    return isset($Result['secure_url']) ? $Result['secure_url'] : '';
 }
 
 if (isset($_POST['add_product'])) {
@@ -46,14 +69,11 @@ if (isset($_POST['add_product'])) {
         $file_type     = mime_content_type($_FILES['product_image']['tmp_name']);
 
         if (in_array($file_type, $allowed_types)) {
-            $ext      = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-            $filename = uniqid('prod_', true) . '.' . $ext;
-            $dest     = "uploads/" . $filename;
-
-            if (move_uploaded_file($_FILES['product_image']['tmp_name'], $dest)) {
-                $image_path = mysqli_real_escape_string($conn, $dest);
+            $cloudinary_url = upload_to_cloudinary($_FILES['product_image']['tmp_name']);
+            if ($cloudinary_url) {
+                $image_path = mysqli_real_escape_string($conn, $cloudinary_url);
             } else {
-                $error_msg = "❌ Failed to save the uploaded image.";
+                $error_msg = "❌ Failed to upload image to Cloudinary.";
             }
         } else {
             $error_msg = "❌ Invalid image type. Only JPG, PNG, WEBP, GIF are allowed.";
@@ -94,19 +114,11 @@ if (isset($_POST['update_product'])) {
         $file_type     = mime_content_type($_FILES['product_image']['tmp_name']);
 
         if (in_array($file_type, $allowed_types)) {
-            // Delete old image
-            if ($current['image'] && file_exists(__DIR__ . '/' . $current['image'])) {
-                unlink($current['image']);
-            }
-
-            $ext      = pathinfo($_FILES['product_image']['name'], PATHINFO_EXTENSION);
-            $filename = uniqid('prod_', true) . '.' . $ext;
-            $dest     = "uploads/" . $filename;
-
-            if (move_uploaded_file($_FILES['product_image']['tmp_name'], $dest)) {
-                $image_path = mysqli_real_escape_string($conn, $dest);
+            $cloudinary_url = upload_to_cloudinary($_FILES['product_image']['tmp_name']);
+            if ($cloudinary_url) {
+                $image_path = mysqli_real_escape_string($conn, $cloudinary_url);
             } else {
-                $error_msg = "❌ Failed to save the uploaded image.";
+                $error_msg = "❌ Failed to upload image to Cloudinary.";
             }
         } else {
             $error_msg = "❌ Invalid image type. Only JPG, PNG, WEBP, GIF are allowed.";

@@ -271,7 +271,7 @@ $stock_lbl = $stock > 0 ? $stock . ' in stock' : 'Out of stock';
     <div class="product-layout">
         <!-- Image -->
         <div class="img-side">
-            <?php if ($product['image'] && file_exists(__DIR__ . '/' . $product['image'])): ?>
+            <?php if ($product['image']): ?>
                 <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['product_name']); ?>">
             <?php else: ?>
                 <span class="no-img">🖼️</span>

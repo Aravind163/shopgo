@@ -558,7 +558,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             $cart_class = $stock === 0 ? 'btn-cart out-of-stock' : 'btn-cart';
             $cart_lbl   = $stock === 0 ? '✕ Out of Stock' : '🛒 Add to Cart';
 
-            $img_block = ($p['image'] && file_exists(__DIR__ . '/' . $p['image']))
+            $img_block = ($p['image'])
                 ? "<img src='" . htmlspecialchars($p['image']) . "' alt='" . htmlspecialchars($p['product_name']) . "'>"
                 : "<span class='no-img-placeholder'>🖼️</span>";
 

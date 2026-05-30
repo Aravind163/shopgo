@@ -119,7 +119,7 @@ tbody tr:hover { background:#fff8f8; }
       <tr>
         <td><?php echo $i++; ?></td>
         <td>
-          <?php if($p['image'] && file_exists(__DIR__.'/'.$p['image'])): ?>
+          <?php if($p['image']): ?>
             <img src="<?php echo htmlspecialchars($p['image']); ?>" class="product-img">
           <?php else: ?><div class="no-img">🖼️</div><?php endif; ?>
         </td>
