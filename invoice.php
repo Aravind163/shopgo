@@ -18,25 +18,114 @@ if (isset($_SESSION['user'])) {
 
 $uname_escaped = mysqli_real_escape_string($conn, $name);
 
+// ════════════ BREVO EMAIL HELPER ════════════
+function send_order_email($to_email, $username, $placed_orders) {
+    $grand_total = array_sum(array_column($placed_orders, 'total_price'));
+
+    $items_html = '';
+    foreach ($placed_orders as $o) {
+        $order_code  = 'ORD-' . strtoupper(substr(md5($o['order_id'] . 'shopgo'), 0, 6));
+        $items_html .= '
+        <tr>
+            <td style="padding:8px;border-bottom:1px solid #ddd">'
+                . htmlspecialchars($o['product_name'])
+                . '<br><small style="color:#888">Code: ' . $order_code . '</small></td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;text-align:center">' . $o['quantity'] . '</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">Rs.' . number_format($o['price'], 2) . '</td>
+            <td style="padding:8px;border-bottom:1px solid #ddd;text-align:right">Rs.' . number_format($o['total_price'], 2) . '</td>
+        </tr>';
+    }
+
+    $message = '
+<div style="font-family:monospace;max-width:600px;margin:auto;padding:16px">
+    <h2 style="text-align:center">ShopGo - Order Confirmation</h2>
+    <p>Dear <strong>' . htmlspecialchars($username) . '</strong>,<br>
+    Thank you for your order. Below is your order summary.</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #ddd">
+        <thead>
+            <tr style="background:#f0f0f0">
+                <th style="padding:8px;text-align:left">Product</th>
+                <th style="padding:8px;text-align:center">Qty</th>
+                <th style="padding:8px;text-align:right">Price</th>
+                <th style="padding:8px;text-align:right">Total</th>
+            </tr>
+        </thead>
+        <tbody>' . $items_html . '</tbody>
+    </table>
+    <p style="text-align:right;font-size:16px">
+        <strong>Grand Total: Rs.' . number_format($grand_total, 2) . '</strong>
+    </p>
+    <p>Login to ShopGo to track your order status.<br>
+    Questions? Email us at support@shopgo.com</p>
+</div>';
+
+    $payload = json_encode([
+        'sender'      => ['name' => 'ShopGo Store', 'email' => 'aravindsiddharthp@gmail.com'],
+        'to'          => [['email' => $to_email, 'name' => $username]],
+        'subject'     => 'Your ShopGo Order is Confirmed!',
+        'htmlContent' => $message,
+    ]);
+
+    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'accept: application/json',
+        'api-key: ' . getenv('BREVO_API_KEY'),
+        'content-type: application/json',
+    ]);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return $httpCode === 201;
+}
+
 // ════════════ PLACE ORDERS FROM CART (only for users) ════════════
+$email_sent  = false;
+$just_ordered = false;
+
 if ($userType === 'user' && !empty($_SESSION['cart'])) {
+    $just_ordered  = true;
+    $placed_orders = [];
+    $user_esc      = mysqli_real_escape_string($conn, $name);
+
+    // Get user email
+    $email_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT Email_id FROM users WHERE Name = '$user_esc'"));
+    $user_email = $email_row ? $email_row['Email_id'] : '';
+
     foreach ($_SESSION['cart'] as $pid => $item) {
-        $pid       = intval($pid);
-        $qty       = intval($item['qty']);
-        $price     = floatval($item['price']);
-        $total     = $price * $qty;
-        $user_esc  = mysqli_real_escape_string($conn, $name);
+        $pid   = intval($pid);
+        $qty   = intval($item['qty']);
+        $price = floatval($item['price']);
+        $total = $price * $qty;
 
         // Insert order
         mysqli_query($conn, "INSERT INTO orders (user_id, product_id, quantity, total_price, status, created_at)
                               VALUES ('$user_esc', '$pid', '$qty', '$total', 'pending', NOW())");
 
+        $order_id = mysqli_insert_id($conn);
+
         // Deduct stock
         mysqli_query($conn, "UPDATE products SET stock = stock - $qty WHERE id = $pid AND stock >= $qty");
+
+        $placed_orders[] = [
+            'order_id'     => $order_id,
+            'product_name' => $item['name'],
+            'quantity'     => $qty,
+            'price'        => $price,
+            'total_price'  => $total,
+        ];
     }
 
-    // Clear cart after placing orders
+    // Clear cart
     unset($_SESSION['cart']);
+
+    // Send confirmation email
+    if ($user_email && !empty($placed_orders)) {
+        $email_sent = send_order_email($user_email, $name, $placed_orders);
+    }
 }
 
 // ════════════ FETCH ORDERS FOR DISPLAY ════════════
@@ -206,6 +295,40 @@ $status_colors = [
     <div class="breadcrumb"><a href="user_home.php">🏠 Home</a> <span>›</span> <span>Invoice</span></div>
     <button class="print-btn" onclick="window.print()">🖨 Print Invoice</button>
 </div>
+
+<?php if ($just_ordered): ?>
+<!-- ── Order Confirmation Popup ── -->
+<div id="order-popup" style="
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.5);z-index:9999;
+    display:flex;align-items:center;justify-content:center">
+    <div style="
+        background:#fff;border-radius:16px;padding:40px 36px;
+        max-width:420px;width:90%;text-align:center;
+        box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="font-size:56px;margin-bottom:16px">✅</div>
+        <h2 style="color:#2c2c2c;margin-bottom:10px;font-size:22px">Order Confirmed!</h2>
+        <p style="color:#666;font-size:14px;margin-bottom:16px">
+            Your order has been placed successfully and is being processed.
+        </p>
+        <?php if ($email_sent): ?>
+            <div style="background:#f0fff4;border:1px solid #c3e6cb;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#276749">
+                📧 Order confirmation email sent!
+            </div>
+        <?php else: ?>
+            <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#7a5a00">
+                ⚠️ Email could not be sent, but your order is confirmed.
+            </div>
+        <?php endif; ?>
+        <button onclick="document.getElementById('order-popup').style.display='none'"
+            style="background:linear-gradient(135deg,#ff6b6b,#f2630a);color:#fff;
+                   border:none;padding:12px 32px;border-radius:8px;font-size:15px;
+                   font-weight:bold;cursor:pointer;width:100%">
+            View My Invoice
+        </button>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="container">
     <div class="invoice-card">
