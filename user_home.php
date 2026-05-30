@@ -289,6 +289,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
             transition: transform .25s, box-shadow .25s;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
         }
         .product-card::before {
             content: '';
@@ -563,7 +564,7 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
                 : "<span class='no-img-placeholder'>🖼️</span>";
 
             echo "
-            <div class='product-card'>
+            <div class='product-card' onclick=\"window.location='cart.php?add=" . $p['id'] . "'\" title='Add to Cart'>
                 <div class='product-img-wrap'>{$img_block}</div>
                 <div class='product-body'>
                     <h4>" . htmlspecialchars($p['product_name']) . "</h4>
@@ -574,10 +575,6 @@ $furniture   = mysqli_query($conn, "SELECT * FROM products WHERE category='Furni
                         <span>{$stock_lbl}</span>
                     </div>
                     <div class='description'>" . htmlspecialchars(substr($p['description'], 0, 100)) . (strlen($p['description']) > 100 ? '…' : '') . "</div>
-                    <div class='card-actions'>
-                        <a href='product_description.php?id=" . $p['id'] . "' class='btn-desc'>🔍 Details</a>
-                        <a href='cart.php?add=" . $p['id'] . "' class='{$cart_class}'>{$cart_lbl}</a>
-                    </div>
                 </div>
             </div>";
         }

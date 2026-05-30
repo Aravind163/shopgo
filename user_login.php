@@ -213,8 +213,13 @@ if (isset($_POST['submit'])) {
 
             <div class="form-group">
                 <label>Password:</label>
-                <input type="password" id="password" name="password"
-                    placeholder="Enter your password">
+                <div style="position:relative">
+                    <input type="password" id="password" name="password"
+                        placeholder="Enter your password"
+                        style="width:100%;padding-right:42px;box-sizing:border-box">
+                    <span id="eye_user" onclick="togglePass('password','eye_user')"
+                        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none">👁️</span>
+                </div>
             </div>
 
             <input type="submit" id="btn" value="Login" name="submit"/>
@@ -227,6 +232,12 @@ if (isset($_POST['submit'])) {
     </div>
 
     <script>
+        function togglePass(inputId, eyeId) {
+            var input = document.getElementById(inputId);
+            var eye   = document.getElementById(eyeId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+            eye.textContent = input.type === 'password' ? '👁️' : '🙈';
+        }
         function isvalid() {
             var name = document.getElementById("name").value.trim();
             var password = document.getElementById("password").value.trim();

@@ -201,14 +201,24 @@ if (isset($_POST['submit'])) {
 
             <div class="form-group">
                 <label>Password:</label>
-                <input type="password" id="password" name="password" 
-                    placeholder="Min 6 characters">
+                <div style="position:relative">
+                    <input type="password" id="password" name="password"
+                        placeholder="Min 6 characters"
+                        style="width:100%;padding-right:42px;box-sizing:border-box">
+                    <span id="eye_pass" onclick="togglePass('password','eye_pass')"
+                        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none">👁️</span>
+                </div>
             </div>
 
             <div class="form-group">
                 <label>Confirm Password:</label>
-                <input type="password" id="cpassword" name="cpassword" 
-                    placeholder="Re-enter password">
+                <div style="position:relative">
+                    <input type="password" id="cpassword" name="cpassword"
+                        placeholder="Re-enter password"
+                        style="width:100%;padding-right:42px;box-sizing:border-box">
+                    <span id="eye_cpass" onclick="togglePass('cpassword','eye_cpass')"
+                        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:18px;user-select:none">👁️</span>
+                </div>
             </div>
 
             <input type="submit" id="btn" value="Register" name="submit"/>
@@ -218,6 +228,12 @@ if (isset($_POST['submit'])) {
     </div>
 
     <script>
+        function togglePass(inputId, eyeId) {
+            var input = document.getElementById(inputId);
+            var eye   = document.getElementById(eyeId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+            eye.textContent = input.type === 'password' ? '👁️' : '🙈';
+        }
         function isvalid() {
             var mobile = document.getElementById("mobile").value.trim();
             var Name = document.getElementById("Name").value.trim();

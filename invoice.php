@@ -18,16 +18,35 @@ if (isset($_SESSION['user'])) {
 
 $uname_escaped = mysqli_real_escape_string($conn, $name);
 
-/* ================== ONLY THIS PART CHANGED ================== */
+// ════════════ PLACE ORDERS FROM CART (only for users) ════════════
+if ($userType === 'user' && !empty($_SESSION['cart'])) {
+    foreach ($_SESSION['cart'] as $pid => $item) {
+        $pid       = intval($pid);
+        $qty       = intval($item['qty']);
+        $price     = floatval($item['price']);
+        $total     = $price * $qty;
+        $user_esc  = mysqli_real_escape_string($conn, $name);
 
-// JOIN orders + products
+        // Insert order
+        mysqli_query($conn, "INSERT INTO orders (user_id, product_id, quantity, total_price, status, created_at)
+                              VALUES ('$user_esc', '$pid', '$qty', '$total', 'pending', NOW())");
+
+        // Deduct stock
+        mysqli_query($conn, "UPDATE products SET stock = stock - $qty WHERE id = $pid AND stock >= $qty");
+    }
+
+    // Clear cart after placing orders
+    unset($_SESSION['cart']);
+}
+
+// ════════════ FETCH ORDERS FOR DISPLAY ════════════
 if ($userType === 'admin') {
     $query = "SELECT o.id, o.quantity, o.total_price, o.status, o.created_at,
                      p.product_name, p.price, p.category, p.image,
                      u.Name AS customer_name
               FROM orders o
               JOIN products p ON o.product_id = p.id
-              LEFT JOIN users u ON o.user_id = u.Mobile_number
+              LEFT JOIN users u ON o.user_id = u.Name
               ORDER BY o.id DESC";
 } else {
     $query = "SELECT o.id, o.quantity, o.total_price, o.status, o.created_at,
@@ -37,8 +56,6 @@ if ($userType === 'admin') {
               WHERE o.user_id = '$uname_escaped'
               ORDER BY o.id DESC";
 }
-
-/* =========================================================== */
 
 $result = mysqli_query($conn, $query);
 if (!$result) {
